@@ -12,21 +12,18 @@ echo  ║  Flask Backend  →  http://localhost:5000      ║
 echo  ╚═══════════════════════════════════════════════╝
 echo.
 
-:: Change to project root (wherever this .bat lives)
 cd /d "%~dp0"
 
 :: Activate virtual environment if it exists
 if exist "venv\Scripts\activate.bat" (
     call venv\Scripts\activate.bat
     echo [OK] Virtual environment activated.
-) else (
-    echo [WARN] No venv found — using system Python.
 )
 
 :: Check .env exists
 if not exist ".env" (
     echo [ERROR] .env file not found!
-    echo         Copy .env.example to .env and fill in your Firebase credentials.
+    echo         Ensure you have a .env file with your Firebase variables.
     pause
     exit /b 1
 )
@@ -41,6 +38,13 @@ if not exist "firebase_credentials.json" (
 
 echo [OK] Starting Flask on port 5000...
 echo.
-python backend\app.py
+
+:: Set Flask entry point and run
+set FLASK_APP=api/app.py
+set FLASK_ENV=development
+set FLASK_DEBUG=1
+set FLASK_PORT=5000
+
+flask run --host=0.0.0.0 --port=5000
 
 pause

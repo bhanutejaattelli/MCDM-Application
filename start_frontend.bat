@@ -1,28 +1,26 @@
 @echo off
 :: ─────────────────────────────────────────────────────────────
-:: start_frontend.bat — Launch Streamlit frontend
+:: start_frontend.bat — Launch React frontend
 :: Dynamic Cloud Service Composition System
 :: ─────────────────────────────────────────────────────────────
-title MCDM Streamlit Frontend
+title MCDM React Frontend
 
 echo.
 echo  ╔═══════════════════════════════════════════════╗
 echo  ║  Dynamic Cloud Service Composition System     ║
-echo  ║  Streamlit UI  →  http://localhost:8501       ║
+echo  ║  React Frontend →  http://localhost:5173       ║
 echo  ╚═══════════════════════════════════════════════╝
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0frontend_react"
 
-if exist "venv\Scripts\activate.bat" (
-    call venv\Scripts\activate.bat
-    echo [OK] Virtual environment activated.
-) else (
-    echo [WARN] No venv found — using system Python.
+if not exist "node_modules" (
+    echo [INFO] node_modules not found. Installing dependencies...
+    npm install
 )
 
-echo [OK] Starting Streamlit...
+echo [OK] Starting Vite Dev Server...
 echo.
-streamlit run frontend\streamlit_app.py --server.port 8501 --server.headless false
+npm run dev
 
 pause
