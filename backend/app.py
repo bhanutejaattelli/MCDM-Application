@@ -1,6 +1,9 @@
-"""
-app.py — Flask application factory and entry point for Vercel.
-"""
+import os
+import sys
+
+# Ensure the 'backend' directory is in the Python path for Vercel
+sys.path.append(os.path.dirname(__file__))
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 from database import init_firebase_admin
