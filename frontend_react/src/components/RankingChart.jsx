@@ -67,8 +67,8 @@ const RankingChart = ({ data }) => {
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           <span>📊</span> Comparative TOPSIS Score (C*)
         </h3>
-        <div className="flex-1 w-full relative">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="flex-1 w-full relative min-h-[300px]">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart
               data={topsisData}
               layout="vertical"
@@ -105,8 +105,8 @@ const RankingChart = ({ data }) => {
           <p className="text-xs text-slate-400 mb-4 text-center">
             Normalized Performance (Higher/Outer edge is better)
           </p>
-          <div className="flex-1 w-full mx-auto relative pointer-events-none sm:pointer-events-auto">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="flex-1 w-full mx-auto relative pointer-events-none sm:pointer-events-auto min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData.chartData}>
                 <PolarGrid stroke="#334155" />
                 <PolarAngleAxis dataKey="subject" tick={{ fill: '#cbd5e1', fontSize: 11 }} />

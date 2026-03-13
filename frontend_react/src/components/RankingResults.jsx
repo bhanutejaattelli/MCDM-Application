@@ -59,7 +59,7 @@ const RankingResults = ({ data }) => {
           <tbody className="text-sm divide-y divide-slate-800">
             {ranked.map((svc, idx) => (
               <tr 
-                key={svc.service_name} 
+                key={`${svc.service_name}-${idx}`} 
                 className={`transition-colors ${idx === 0 ? 'bg-emerald-500/10 hover:bg-emerald-500/20' : 'hover:bg-white/5'}`}
               >
                 <td className="p-4 sticky left-0 font-bold text-center z-10 
