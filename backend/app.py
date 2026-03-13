@@ -13,8 +13,11 @@ from services import services_bp
 def create_app() -> Flask:
     app = Flask(__name__)
     
-    # Allow all origins
-    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+    # Allow all origins and common headers for local development and Vercel
+    CORS(app, resources={r"/*": {"origins": "*"}}, 
+         supports_credentials=True,
+         allow_headers=["Content-Type", "Authorization"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
     # Initialize Firebase Admin SDK
     init_firebase_admin()
