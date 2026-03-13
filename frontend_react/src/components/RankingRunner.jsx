@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { api } from '../App';
 
 const RankingRunner = ({ servicesCount, onRankingSuccess }) => {
   const [loading, setLoading] = useState(false);

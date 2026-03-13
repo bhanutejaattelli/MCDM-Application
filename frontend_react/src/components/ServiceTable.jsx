@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { api } from '../App';
 
 const ServiceTable = ({ services, loading, onRefresh, currentPage, totalPages, onPageChange, totalCount }) => {
   const [editingId, setEditingId] = useState(null);
