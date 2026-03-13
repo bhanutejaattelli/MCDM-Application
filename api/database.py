@@ -57,9 +57,26 @@ def init_firebase_admin() -> None:
     if firebase_admin._apps:
         return
     _validate_config()
+    
+    # Try loading from Environment Variable (for Vercel)
+    service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+    if service_account_json:
+        import json
+        try:
+            cred_dict = json.loads(service_account_json)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred, {"databaseURL": firebase_cfg["databaseURL"]})
+            return
+        except Exception as e:
+            print(f"Failed to initialize Firebase from env var: {e}")
+
+    # Fallback to local file (for local development)
     cred_path = os.path.join(os.path.dirname(__file__), "..", "firebase_credentials.json")
     if not os.path.exists(cred_path):
-        raise FileNotFoundError("firebase_credentials.json not found in project root.")
+        raise FileNotFoundError(
+            "Firebase credentials not found. Set FIREBASE_SERVICE_ACCOUNT_JSON env var "
+            "or ensure firebase_credentials.json exists in project root."
+        )
     cred = credentials.Certificate(cred_path)
     firebase_admin.initialize_app(cred, {"databaseURL": firebase_cfg["databaseURL"]})
 

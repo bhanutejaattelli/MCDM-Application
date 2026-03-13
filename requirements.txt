@@ -1,21 +1,10 @@
-# Dynamic Cloud Service Composition System
-# Backend Requirements
-
-# Web Framework
-Flask==3.0.2
-Flask-Cors==4.0.0
-
-# Firebase SDKs
-firebase-admin==6.4.0
-Pyrebase4==4.7.1
-
-# Environment
-python-dotenv==1.0.1
-
-# Data Processing & Algorithm
-numpy==1.26.4
-pandas==2.2.1
-openpyxl==3.1.2
-
-# Testing (Optional)
-pytest==8.0.2
+# Dynamic Cloud Service Composition System - Backend Requirements
+flask
+flask-cors
+firebase-admin
+pyrebase4
+python-dotenv
+numpy
+pandas
+openpyxl
+pytest
