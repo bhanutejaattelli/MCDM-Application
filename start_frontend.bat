@@ -12,7 +12,7 @@ echo  ║  React Frontend →  http://localhost:5173       ║
 echo  ╚═══════════════════════════════════════════════╝
 echo.
 
-cd /d "%~dp0frontend_react"
+cd /d "%~dp0frontend"
 
 if not exist "node_modules" (
     echo [INFO] node_modules not found. Installing dependencies...

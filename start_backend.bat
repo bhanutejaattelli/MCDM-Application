@@ -40,7 +40,7 @@ echo [OK] Starting Flask on port 5000...
 echo.
 
 :: Set Flask entry point and run
-set FLASK_APP=api/app.py
+set FLASK_APP=backend/app.py
 set FLASK_ENV=development
 set FLASK_DEBUG=1
 set FLASK_PORT=5000
