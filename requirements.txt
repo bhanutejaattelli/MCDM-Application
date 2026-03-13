@@ -1,36 +1,21 @@
 # Dynamic Cloud Service Composition System
-# Requirements — compatible with Python 3.10+
-# Install: pip install -r requirements.txt
+# Backend Requirements
 
 # Web Framework
-flask
-flask-cors
+Flask==3.0.2
+Flask-Cors==4.0.0
 
-# Frontend
-streamlit
-
-# Firebase
-firebase-admin
-pyrebase4
-
-# HTTP
-requests
-
-# Data Processing
-pandas
-numpy
-openpyxl
-xlrd
-
-# Visualization
-plotly
-matplotlib
+# Firebase SDKs
+firebase-admin==6.4.0
+Pyrebase4==4.7.1
 
 # Environment
-python-dotenv
+python-dotenv==1.0.1
 
-# Utilities
-scipy
+# Data Processing & Algorithm
+numpy==1.26.4
+pandas==2.2.1
+openpyxl==3.1.2
 
-# Testing
-pytest
+# Testing (Optional)
+pytest==8.0.2
