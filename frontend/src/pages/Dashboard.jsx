@@ -23,7 +23,7 @@ const Dashboard = () => {
   const fetchServices = async (page = 1) => {
     setLoadingServices(true);
     try {
-      const response = await api.get(`/get_services?page=${page}&limit=10&search=${encodeURIComponent(searchQuery)}`);
+      const response = await api.get(`/services?page=${page}&limit=10&search=${encodeURIComponent(searchQuery)}`);
       if (response.data?.status === 'success') {
         const d = response.data.data;
         setServices(d.services || []);

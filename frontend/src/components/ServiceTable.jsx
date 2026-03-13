@@ -23,7 +23,7 @@ const ServiceTable = ({ services, loading, onRefresh, currentPage, totalPages, o
   const handleSave = async (id) => {
     setActionLoading(true);
     try {
-      await api.put(`/update_service/${id}`, editForm);
+      await api.put(`/services/${id}`, editForm);
       setEditingId(null);
       onRefresh();
     } catch (err) {
@@ -38,7 +38,7 @@ const ServiceTable = ({ services, loading, onRefresh, currentPage, totalPages, o
     
     setActionLoading(true);
     try {
-      await api.delete(`/delete_service/${id}`);
+      await api.delete(`/services/${id}`);
       onRefresh();
     } catch (err) {
       alert("Failed to delete service: " + (err.response?.data?.message || err.message));

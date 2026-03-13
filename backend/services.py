@@ -3,15 +3,14 @@ services.py — Cloud service CRUD routes backed by Firebase Realtime Database.
 """
 from flask import Blueprint, request, jsonify
 import pandas as pd
-import numpy as np
 from io import BytesIO
 from database import (
     add_service_to_db,
     get_services_from_db,
     delete_service_from_db,
     delete_all_services_from_db,
+    update_service_in_db,
     build_service_record,
-    utc_now,
     verify_id_token,
 )
 from algorithm import run_ranking, QOS_CRITERIA
@@ -41,8 +40,68 @@ def require_auth():
 
 # ── Routes ────────────────────────────────────────────────────────────────────────
 
+@services_bp.route("", methods=["GET"])
+def list_services():
+    """GET /services — List all services with filtering, sorting, and pagination."""
+    uid, err = require_auth()
+    if err: return err
+    try:
+        services = get_services_from_db(uid)
+        
+        # Search
+        search = request.args.get("search", "").strip().lower()
+        if search:
+            services = [s for s in services if search in s.get("service_name", "").lower()]
+        
+        # Sort
+        sort_by = request.args.get("sort_by", "timestamp")
+        order = request.args.get("order", "desc").lower()
+        reverse = (order == "desc")
+        services.sort(key=lambda s: s.get(sort_by) or (0 if sort_by != "service_name" else ""), reverse=reverse)
+
+        # Pagination
+        total_count = len(services)
+        limit = int(request.args.get("limit", 10))
+        page = int(request.args.get("page", 1))
+        start_idx = (page - 1) * limit
+        
+        avg_rt = round(sum(s.get("response_time", 0) for s in services) / total_count, 2) if total_count > 0 else 0
+        avg_tp = round(sum(s.get("throughput", 0) for s in services) / total_count, 2) if total_count > 0 else 0
+        
+        return success_response(data={
+            "count": total_count,
+            "avg_response_time": avg_rt,
+            "avg_throughput": avg_tp,
+            "page": page,
+            "limit": limit,
+            "total_pages": (total_count + limit - 1) // limit if limit > 0 else 1,
+            "services": services[start_idx : start_idx + limit]
+        })
+    except Exception as e:
+        return error_response(str(e), 500)
+
+
+@services_bp.route("/manual", methods=["POST"])
+def add_manual():
+    """POST /services/manual — Add a single service manually."""
+    uid, err = require_auth()
+    if err: return err
+
+    body = request.get_json(silent=True) or {}
+    try:
+        record = build_service_record(body)
+        existing_services = get_services_from_db(uid)
+        if any(s.get("service_name", "").lower() == record["service_name"].lower() for s in existing_services):
+            return error_response("Service already exists in database", 409)
+        stored = add_service_to_db(uid, record)
+        return success_response(data=stored, message=f"Service '{record['service_name']}' added.", status=201)
+    except Exception as e:
+        return error_response(str(e), 500)
+
+
 @services_bp.route("/upload", methods=["POST"])
 def upload_excel():
+    """POST /services/upload — Bulk upload services from Excel."""
     uid, err = require_auth()
     if err: return err
 
@@ -54,59 +113,43 @@ def upload_excel():
         return error_response("Only .xlsx / .xls files are accepted.", 400)
 
     try:
-        services = parse_excel(file.read())
+        raw_services = parse_excel(file.read())
+        stored, skipped = _store_services(uid, raw_services)
+        
+        msg = f"{len(stored)} services uploaded successfully."
+        if skipped > 0:
+            msg += f" {skipped} duplicate(s) skipped."
+            
+        return success_response(
+            data={"count": len(stored), "skipped": skipped, "services": stored},
+            message=msg.strip(),
+            status=201
+        )
     except Exception as e:
         return error_response(str(e), 400)
 
-    stored, skipped = _store_services(uid, services)
-    
-    msg = f"{len(stored)} services uploaded successfully."
-    if skipped > 0:
-        msg += f" {skipped} duplicate(s) skipped."
-        
-    return success_response(
-        data={"count": len(stored), "skipped": skipped, "services": stored},
-        message=msg.strip(),
-        status=201
-    )
 
-
-@services_bp.route("/manual", methods=["POST"])
-def add_manual():
+@services_bp.route("/<service_id>", methods=["PUT"])
+def update_service_route(service_id: str):
+    """PUT /services/<id> — Update a service.")]"""
     uid, err = require_auth()
     if err: return err
-
+    
     body = request.get_json(silent=True) or {}
-    raw_services = body.get("services", [])
-
-    try:
-        services = validate_manual_entries(raw_services)
-    except Exception as e:
-        return error_response(str(e), 400)
-
-    stored, skipped = _store_services(uid, services)
+    updates = {f: float(body[f]) for f in QOS_CRITERIA if f in body}
     
-    msg = f"{len(stored)} services added successfully."
-    if skipped > 0:
-        msg += f" {skipped} duplicate(s) skipped."
-        
-    return success_response(
-        data={"count": len(stored), "skipped": skipped, "services": stored},
-        message=msg.strip(),
-        status=201
-    )
-
-
-@services_bp.route("/list", methods=["GET"])
-def list_services():
-    uid, err = require_auth()
-    if err: return err
-    items = get_services_from_db(uid)
-    return success_response(data={"count": len(items), "services": items})
+    if not updates: 
+        return error_response("No valid fields to update.", 400)
+    try:
+        updated = update_service_in_db(uid, service_id, updates)
+        return success_response(data=updated, message="Service updated.")
+    except Exception as e:
+        return error_response(str(e), 500)
 
 
 @services_bp.route("/<service_id>", methods=["DELETE"])
 def delete_service_route(service_id: str):
+    """DELETE /services/<id> — Delete a specific service."""
     uid, err = require_auth()
     if err: return err
     if delete_service_from_db(uid, service_id):
@@ -114,34 +157,27 @@ def delete_service_route(service_id: str):
     return error_response("Service not found.", 404)
 
 
-@services_bp.route("/all", methods=["DELETE"])
+@services_bp.route("", methods=["DELETE"])
 def delete_all_services_route():
+    """DELETE /services — Delete all services for the user."""
     uid, err = require_auth()
     if err: return err
     delete_all_services_from_db(uid)
     return success_response(message="All services deleted.")
 
 
-@services_bp.route("/rank", methods=["POST"])
+@services_bp.route("/rank", methods=["POST", "OPTIONS"])
 def rank_services_bp():
+    """POST /services/rank — Calculate MCDM ranking."""
+    if request.method == "OPTIONS": return jsonify({}), 200
     uid, err = require_auth()
     if err: return err
 
-    body = request.get_json(silent=True) or {}
-    inline = body.get("services")
-
-    if inline:
-        try:
-            services = validate_manual_entries(inline)
-        except Exception as e:
-            return error_response(str(e), 400)
-    else:
-        services = get_services_from_db(uid)
-
-    if len(services) < 2:
-        return error_response("At least 2 services are needed to rank.", 400)
-
     try:
+        services = get_services_from_db(uid)
+        if len(services) < 2:
+            return error_response("At least 2 services are needed to rank.", 400)
+        
         result_df, weights, criteria = run_ranking(services)
         return success_response(data={
             "ranked":  result_df.to_dict(orient="records"),
@@ -191,21 +227,6 @@ def parse_excel(file_bytes: bytes) -> list[dict]:
     return df[list(col_map.values())].to_dict(orient="records")
 
 
-def validate_manual_entries(data: list[dict]) -> list[dict]:
-    if not isinstance(data, list) or not data:
-        raise ValueError("Invalid services list.")
-    validated = []
-    for item in data:
-        name = str(item.get("service_name", "")).strip()
-        if not name: continue
-        clean = {"service_name": name}
-        for crit in QOS_CRITERIA:
-            try: clean[crit] = float(item.get(crit, 0))
-            except: clean[crit] = 0.0
-        validated.append(clean)
-    return validated
-
-
 def success_response(data=None, message="Success", status=200):
     body = {"status": "success", "message": message}
     if data is not None: body["data"] = data
@@ -214,11 +235,3 @@ def success_response(data=None, message="Success", status=200):
 
 def error_response(message="Error", status=400):
     return jsonify({"status": "error", "message": message}), status
-
-
-def services_to_dataframe(services: list[dict]) -> pd.DataFrame:
-    df = pd.DataFrame(services)
-    for crit in QOS_CRITERIA:
-        if crit in df.columns:
-            df[crit] = pd.to_numeric(df[crit], errors="coerce").fillna(0)
-    return df

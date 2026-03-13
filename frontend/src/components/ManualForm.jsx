@@ -26,8 +26,8 @@ const ManualForm = ({ onAddSuccess }) => {
     setError('');
 
     try {
-      // Hits the db_bp in the backend
-      const response = await api.post('/add_service', {
+      // Hits the services_bp in the backend
+      const response = await api.post('/services/manual', {
         service_name: formData.serviceName,
         response_time: parseFloat(formData.responseTime),
         throughput: parseFloat(formData.throughput),

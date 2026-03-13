@@ -10,8 +10,8 @@ const RankingRunner = ({ servicesCount, onRankingSuccess }) => {
     setError('');
     
     try {
-      // Hits the /rank_services endpoint we added to db_routes.py
-      const response = await api.post('/rank_services');
+      // Hits the /services/rank endpoint in the backend
+      const response = await api.post('/services/rank');
       
       if (response.data?.status === 'success') {
         onRankingSuccess(response.data.data);
