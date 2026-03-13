@@ -46,7 +46,11 @@ const UploadExcel = ({ onUploadSuccess }) => {
         setError(response.data?.message || 'Upload failed');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Error communicating with server');
+      if (err.response?.status === 409) {
+        setError('Upload stopped: One or more services already exist in the database.');
+      } else {
+        setError(err.response?.data?.message || 'Error communicating with server');
+      }
     } finally {
       setLoading(false);
     }

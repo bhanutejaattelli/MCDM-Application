@@ -43,7 +43,11 @@ const ManualForm = ({ onAddSuccess }) => {
         setError(response.data?.message || 'Failed to add service');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Error communicating with server');
+      if (err.response?.status === 409) {
+        setError('A service with this name already exists.');
+      } else {
+        setError(err.response?.data?.message || 'Error communicating with server');
+      }
     } finally {
       setLoading(false);
     }
