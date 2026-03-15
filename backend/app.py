@@ -22,9 +22,9 @@ def create_app() -> Flask:
     # Initialize Firebase Admin SDK
     init_firebase_admin()
 
-    # Register Blueprints with /api prefix to match Vercel rewriter
-    app.register_blueprint(auth_bp, url_prefix='/api')
-    app.register_blueprint(services_bp, url_prefix='/api')
+    # Register Blueprints with explicit prefixes to match frontend calls and Vercel routing
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(services_bp, url_prefix='/api/services')
 
     @app.route("/api/health", methods=["GET"])
     def health():

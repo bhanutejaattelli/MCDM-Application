@@ -15,7 +15,7 @@ from database import (
 )
 from algorithm import run_ranking, QOS_CRITERIA
 
-services_bp = Blueprint("services", __name__, url_prefix="/services")
+services_bp = Blueprint("services", __name__)
 
 
 # ── Auth middleware helper ────────────────────────────────────────────────────────
