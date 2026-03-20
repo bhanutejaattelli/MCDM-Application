@@ -9,6 +9,7 @@ from flask_cors import CORS
 from database import init_firebase_admin
 from auth import auth_bp
 from services import services_bp
+from chatbot import chatbot_bp
 
 def create_app() -> Flask:
     app = Flask(__name__)
@@ -25,6 +26,7 @@ def create_app() -> Flask:
     # Register Blueprints with explicit prefixes to match frontend calls and Vercel routing
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(services_bp, url_prefix='/api/services')
+    app.register_blueprint(chatbot_bp, url_prefix='/api')
 
     @app.route("/api/health", methods=["GET"])
     def health():

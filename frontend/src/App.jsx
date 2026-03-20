@@ -6,7 +6,6 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 
 // --- API MIGRATED ---
-// --- API MIGRATED ---
 const backendUrl = import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : '/api');
 export const api = axios.create({
   baseURL: backendUrl,

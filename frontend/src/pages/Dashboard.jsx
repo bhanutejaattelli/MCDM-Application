@@ -7,6 +7,7 @@ import ServiceTable from '../components/ServiceTable';
 import RankingRunner from '../components/RankingRunner';
 import RankingResults from '../components/RankingResults';
 import RankingChart from '../components/RankingChart';
+import Chatbot from '../components/Chatbot';
 
 const Dashboard = () => {
   const [services, setServices] = useState([]);
@@ -125,6 +126,7 @@ const Dashboard = () => {
         )}
 
       </main>
+      <Chatbot />
     </div>
   );
 };
