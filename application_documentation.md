@@ -7,6 +7,7 @@ The **Dynamic Cloud Service Composition System** is an intelligent platform desi
 - **Real-time Ranking**: Uses Entropy Weight + TOPSIS algorithms to rank services.
 - **Dynamic QoS**: Supports Response Time, Throughput, Security, and Cost as primary criteria.
 - **Bulk Operations**: Supports manual entry and bulk upload via Excel (.xlsx).
+- **AI-powered Cloud Assistant**: Integrated Gemini-powered chatbot to assist with MCDM concepts and app navigation.
 - **Secure Auth**: Integrated with Firebase Authentication for user-specific data isolation.
 - **Serverless Ready**: Optimized for deployment on platforms like Vercel.
 
@@ -42,11 +43,12 @@ All endpoints are prefixed with `/api`.
 - **POST `/login`**: Authenticates user and returns an ID Token + Refresh Token.
 - **GET `/profile`**: Retrieves private user data using the bearer token.
 
-#### Services (`/api/services`)
-- **GET `/`**: Lists all services for the authenticated user.
-- **POST `/manual`**: Adds a single service record.
-- **POST `/upload`**: Processes Excel files to add multiple services at once.
-- **POST `/rank`**: Trigger the MCDM pipeline on the user's stored services.
+#### Services & AI (`/api`)
+- **GET `/api/services`**: Lists all services for the authenticated user.
+- **POST `/api/services/manual`**: Adds a single service record.
+- **POST `/api/services/upload`**: Processes Excel files to add multiple services at once.
+- **POST `/api/services/rank`**: Trigger the MCDM pipeline on the user's stored services.
+- **POST `/api/chatbot`**: Interface for the AI Cloud Assistant (Gemini).
 - **PUT / DELETE**: Standard CRUD operations for specific service records.
 
 ### Database Schema
@@ -98,6 +100,7 @@ Built with React, Vite, and Tailwind CSS.
 - **AuthProvider**: Wraps the app to provide `currentUser`, [token](file:///d:/Major%20Project/MCDM/backend/database.py#99-103), and [logout()](file:///d:/Major%20Project/MCDM/frontend/src/App.jsx#46-51) globally via React Context.
 - **ProtectedRoute**: Gated routes that redirect unauthenticated users to `/login`.
 - **Dashboard**: The main workspace for viewing, adding, and ranking services.
+- **Chatbot**: An interactive AI assistant component (`Chatbot.jsx`) with custom styling (`Chatbot.css`).
 - **Charts/Tables**: Visual representation of QoS data and ranking results.
 
 ---
@@ -111,6 +114,7 @@ The following must be set in [.env](file:///d:/Major%20Project/MCDM/.env) (local
 - `FIREBASE_DATABASE_URL`
 - `FIREBASE_PROJECT_ID`
 - `FIREBASE_SERVICE_ACCOUNT_JSON`: Full JSON string of the service account for backend Admin SDK.
+- `GEMINI_API_KEY`: API key for the Google Gemini AI integration.
 
 ### Vercel Configuration ([vercel.json](file:///d:/Major%20Project/MCDM/vercel.json))
 - Routes all `/api/(.*)` requests to [backend/app.py](file:///d:/Major%20Project/MCDM/backend/app.py).
