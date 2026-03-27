@@ -44,6 +44,7 @@ def _save_user_to_db(uid: str, email: str, display_name: str) -> None:
         "uid":         uid,
         "email":       email,
         "displayName": display_name,
+        "role":        "user",
         "createdAt":   datetime.datetime.utcnow().isoformat() + "Z",
         "lastLoginAt": datetime.datetime.utcnow().isoformat() + "Z",
     })
@@ -108,6 +109,7 @@ def register():
                 "uid":         uid,
                 "email":       email,
                 "displayName": name_to_store,
+                "role":        "user",
                 "idToken":     id_token,
             },
             message="Account created successfully.",
@@ -157,6 +159,13 @@ def login():
         except Exception:
             display_name = email.split("@")[0]
 
+        # Fetch role from DB
+        try:
+            user_data = get_db_ref(f"/users/{uid}").get() or {}
+            role = user_data.get("role", "user") if isinstance(user_data, dict) else "user"
+        except Exception:
+            role = "user"
+
         # Update last login timestamp in Realtime DB (non-blocking)
         _update_last_login(uid)
 
@@ -165,6 +174,7 @@ def login():
                 "uid":          uid,
                 "email":        pb_user["email"],
                 "displayName":  display_name,
+                "role":         role,
                 "idToken":      pb_user["idToken"],
                 "refreshToken": pb_user["refreshToken"],
                 "expiresIn":    pb_user["expiresIn"],
@@ -282,6 +292,7 @@ def get_profile():
             "uid":           uid,
             "email":         admin_user.email,
             "displayName":   admin_user.display_name,
+            "role":          db_profile.get("role", "user"),
             "emailVerified": admin_user.email_verified,
             "createdAt":     db_profile.get("createdAt"),
             "lastLoginAt":   db_profile.get("lastLoginAt"),

@@ -9,3 +9,5 @@ pandas
 openpyxl
 pytest
 google-generativeai
+apscheduler
+requests

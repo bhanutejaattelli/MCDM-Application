@@ -15,6 +15,8 @@ from database import (
 )
 from algorithm import run_ranking, QOS_CRITERIA
 
+
+
 services_bp = Blueprint("services", __name__)
 
 
@@ -189,7 +191,71 @@ def rank_services_bp():
         return error_response(str(e), 500)
 
 
+@services_bp.route("/import-global", methods=["POST"])
+def import_global_services():
+    """POST /services/import-global — Import services from global DB to user's personal DB."""
+    uid, err = require_auth()
+    if err: return err
+
+    body = request.get_json(silent=True) or {}
+    provider_ids = body.get("provider_ids", [])  # Optional: specific IDs to import
+
+    try:
+        from database import get_global_providers
+
+        global_providers = get_global_providers()
+
+        if not global_providers:
+            return error_response("No global providers available to import.", 404)
+
+        # Filter by specific IDs if provided
+        if provider_ids:
+            global_providers = [p for p in global_providers if p.get("id") in provider_ids]
+            if not global_providers:
+                return error_response("None of the specified provider IDs were found.", 404)
+
+        # Get existing services to avoid duplicates
+        existing = get_services_from_db(uid)
+        existing_names = {s.get("service_name", "").lower() for s in existing}
+
+        imported = []
+        skipped = 0
+        for provider in global_providers:
+            service_name = provider.get("name", "Unknown")
+
+            # Skip if already exists in user's personal DB
+            if service_name.lower() in existing_names:
+                skipped += 1
+                continue
+
+            # Build a service record from the global provider data
+            record = build_service_record({
+                "service_name":  service_name,
+                "response_time": provider.get("response_time", 0),
+                "throughput":    provider.get("throughput", 0),
+                "security":      provider.get("security", 0),
+                "cost":          provider.get("cost", 0),
+            })
+
+            stored = add_service_to_db(uid, record)
+            imported.append(stored)
+            existing_names.add(service_name.lower())
+
+        msg = f"{len(imported)} services imported successfully."
+        if skipped > 0:
+            msg += f" {skipped} duplicate(s) skipped."
+
+        return success_response(
+            data={"imported_count": len(imported), "skipped": skipped, "services": imported},
+            message=msg,
+            status=201
+        )
+    except Exception as e:
+        return error_response(str(e), 500)
+
+
 # ── Internal Helpers ──────────────────────────────────────────────────────────────
+
 
 def _store_services(uid: str, services: list[dict]) -> tuple[list[dict], int]:
     existing_services = get_services_from_db(uid)

@@ -9,18 +9,39 @@ Database Structure
 │       ├── uid           : string
 │       ├── email         : string
 │       ├── displayName   : string
+│       ├── role          : string  ("user" | "admin")
 │       ├── createdAt     : ISO-8601 string (UTC)
 │       └── lastLoginAt   : ISO-8601 string (UTC)
 │
-└── services/
-    └── {uid}/
-        └── {push_id}/
-            ├── service_name  : string          — Cloud provider / service label
-            ├── response_time : float  (ms)     — Average latency (lower = better)
-            ├── throughput    : float  (req/s)  — Requests per second (higher = better)
-            ├── security      : float  (0-100)  — Security score (higher = better)
-            ├── cost          : float  (USD/mo) — Monthly cost (lower = better)
-            └── timestamp     : string (ISO-8601 UTC) — When the record was added
+├── services/
+│   └── {uid}/
+│       └── {push_id}/
+│           ├── service_name  : string          — Cloud provider / service label
+│           ├── response_time : float  (ms)     — Average latency (lower = better)
+│           ├── throughput    : float  (req/s)  — Requests per second (higher = better)
+│           ├── security      : float  (0-100)  — Security score (higher = better)
+│           ├── cost          : float  (USD/mo) — Monthly cost (lower = better)
+│           └── timestamp     : string (ISO-8601 UTC) — When the record was added
+│
+├── global_providers/
+│   └── {provider_id}/
+│       ├── name          : string          — Service name (e.g. "AWS EC2 t3.micro")
+│       ├── provider      : string          — Cloud provider (AWS | Azure | GCP)
+│       ├── type          : string          — Service type (Compute | Storage | Database | Network)
+│       ├── cost          : float  (USD/hr) — Hourly cost
+│       ├── response_time : float  (ms)     — Estimated latency
+│       ├── throughput    : float  (req/s)  — Estimated throughput
+│       ├── security      : float  (0-10)   — Estimated security score
+│       └── last_updated  : string (ISO-8601 UTC)
+│
+└── update_logs/
+    └── {push_id}/
+        ├── timestamp     : string (ISO-8601 UTC)
+        ├── status        : string ("success" | "error")
+        ├── message       : string
+        ├── aws_count     : int
+        ├── azure_count   : int
+        └── gcp_count     : int
 """
 
 import os
@@ -116,7 +137,7 @@ SERVICE_REQUIRED_FIELDS = ["service_name"]
 SERVICE_NUMERIC_FIELDS  = ["response_time", "throughput", "security", "cost"]
 SERVICE_ALL_FIELDS      = SERVICE_REQUIRED_FIELDS + SERVICE_NUMERIC_FIELDS + ["timestamp"]
 
-USER_FIELDS = ["uid", "email", "displayName", "createdAt", "lastLoginAt"]
+USER_FIELDS = ["uid", "email", "displayName", "role", "createdAt", "lastLoginAt"]
 
 
 # ── Timestamp helper ──────────────────────────────────────────────────────────
@@ -126,7 +147,7 @@ def utc_now() -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SERVICES
+# SERVICES (per-user)
 # ══════════════════════════════════════════════════════════════════════════════
 
 def build_service_record(data: dict) -> dict:
@@ -230,12 +251,13 @@ def update_service_in_db(uid: str, service_id: str, updates: dict) -> dict:
 def save_user_to_db(uid: str, email: str, display_name: str) -> None:
     """
     Write (overwrite) a user record at /users/{uid}/.
-    Called on first registration.
+    Called on first registration. Sets role to 'user' by default.
     """
     get_db_ref(f"/users/{uid}").set({
         "uid":         uid,
         "email":       email,
         "displayName": display_name,
+        "role":        "user",
         "createdAt":   utc_now(),
         "lastLoginAt": utc_now(),
     })
@@ -252,3 +274,103 @@ def update_user_last_login(uid: str) -> None:
 def get_user_from_db(uid: str) -> dict | None:
     """Fetch user profile from /users/{uid}/. Returns None if not found."""
     return get_db_ref(f"/users/{uid}").get()
+
+
+# ── Role-Based Access Control helpers ─────────────────────────────────────────
+
+def get_user_role(uid: str) -> str:
+    """Return user's role ('admin' or 'user'). Defaults to 'user' if not set."""
+    user = get_db_ref(f"/users/{uid}").get()
+    if user and isinstance(user, dict):
+        return user.get("role", "user")
+    return "user"
+
+
+def set_user_role(uid: str, role: str) -> None:
+    """Update a user's role in the database."""
+    if role not in ("user", "admin"):
+        raise ValueError("Role must be 'user' or 'admin'.")
+    get_db_ref(f"/users/{uid}").update({"role": role})
+
+
+def get_all_users() -> list[dict]:
+    """Return all user records from /users/. For admin user listing."""
+    data = get_db_ref("/users").get() or {}
+    users = []
+    for uid, user_data in data.items():
+        if isinstance(user_data, dict):
+            users.append({"uid": uid, **user_data})
+    return users
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# GLOBAL PROVIDERS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def add_global_provider(record: dict) -> dict:
+    """Push a provider record to /global_providers/. Returns record with id."""
+    ref = get_db_ref("/global_providers")
+    new_ref = ref.push(record)
+    return {"id": new_ref.key, **record}
+
+
+def get_global_providers() -> list[dict]:
+    """Retrieve all global providers from /global_providers/."""
+    data = get_db_ref("/global_providers").get() or {}
+    providers = []
+    for k, v in data.items():
+        if isinstance(v, dict):
+            providers.append({"id": k, **v})
+    return providers
+
+
+def update_global_provider(provider_id: str, updates: dict) -> dict:
+    """Update fields for a global provider. Returns the updated record."""
+    ref = get_db_ref(f"/global_providers/{provider_id}")
+    if ref.get() is None:
+        raise ValueError("Global provider not found.")
+    ref.update(updates)
+    return {"id": provider_id, **ref.get()}
+
+
+def delete_global_provider(provider_id: str) -> bool:
+    """Delete a global provider by ID. Returns True if deleted."""
+    ref = get_db_ref(f"/global_providers/{provider_id}")
+    if ref.get() is None:
+        return False
+    ref.delete()
+    return True
+
+
+def delete_all_global_providers() -> None:
+    """Delete the entire /global_providers/ subtree."""
+    get_db_ref("/global_providers").delete()
+
+
+def set_global_provider(provider_id: str, record: dict) -> dict:
+    """Set (overwrite) a global provider at a specific ID."""
+    get_db_ref(f"/global_providers/{provider_id}").set(record)
+    return {"id": provider_id, **record}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# UPDATE LOGS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def add_update_log(log_entry: dict) -> dict:
+    """Push an update log entry to /update_logs/."""
+    log_entry["timestamp"] = utc_now()
+    ref = get_db_ref("/update_logs")
+    new_ref = ref.push(log_entry)
+    return {"id": new_ref.key, **log_entry}
+
+
+def get_update_logs(limit: int = 20) -> list[dict]:
+    """Retrieve recent update logs, newest first."""
+    data = get_db_ref("/update_logs").get() or {}
+    logs = []
+    for k, v in data.items():
+        if isinstance(v, dict):
+            logs.append({"id": k, **v})
+    logs.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+    return logs[:limit]

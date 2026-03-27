@@ -4,6 +4,8 @@ import axios from 'axios';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import GlobalProviders from './pages/GlobalProviders';
+import AdminDashboard from './pages/AdminDashboard';
 
 // --- API MIGRATED ---
 const backendUrl = import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : '/api');
@@ -19,7 +21,7 @@ api.interceptors.request.use((config) => {
   return config;
 }, (error) => Promise.reject(error));
 
-// --- AUTH CONTEXT MIGRATED ---
+// --- AUTH CONTEXT ---
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
@@ -48,8 +50,15 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser(null);
   };
 
+  // Update user data (e.g., when role changes)
+  const updateUser = (updates) => {
+    const updated = { ...currentUser, ...updates };
+    localStorage.setItem('user', JSON.stringify(updated));
+    setCurrentUser(updated);
+  };
+
   return (
-    <AuthContext.Provider value={{ currentUser, loginUser, logout }}>
+    <AuthContext.Provider value={{ currentUser, loginUser, logout, updateUser }}>
       {!loading && children}
     </AuthContext.Provider>
   );
@@ -68,6 +77,13 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
+const AdminRoute = ({ children }) => {
+  const { currentUser } = useAuth();
+  if (!currentUser) return <Navigate to="/login" replace />;
+  if (currentUser.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  return children;
+};
+
 export default function App() {
   return (
     <AuthProvider>
@@ -77,9 +93,12 @@ export default function App() {
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/global-providers" element={<ProtectedRoute><GlobalProviders /></ProtectedRoute>} />
+          <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>
   );
 }
+
